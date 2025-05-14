@@ -29,7 +29,12 @@ def fit_model(t, data, model_func, p0, bounds=None):
     返回:
         tuple: (拟合参数, 参数误差, 协方差矩阵)
     """
-    popt, pcov = curve_fit(model_func, t, data, p0=p0, bounds=bounds)
+    # 只有当提供了边界时才传递bounds参数
+    if bounds is not None:
+        popt, pcov = curve_fit(model_func, t, data, p0=p0, bounds=bounds)
+    else:
+        popt, pcov = curve_fit(model_func, t, data, p0=p0)
+    
     perr = np.sqrt(np.diag(pcov))  # 参数的标准误差
     return popt, perr, pcov
 
