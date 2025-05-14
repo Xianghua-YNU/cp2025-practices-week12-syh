@@ -1,17 +1,33 @@
 import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
+import os
 
-def load_bacterial_data(file_path):
-    """从文件加载细菌生长数据，自动检测分隔符"""
+# 设置字体为黑体
+plt.rcParams['font.family'] = 'SimHei'
+
+def load_bacterial_data(file_name):
+    """从当前目录加载细菌生长数据，自动检测分隔符"""
+    # 获取当前脚本所在目录
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_dir, file_name)
+    
+    # 检查文件是否存在
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"数据文件不存在: {file_name}")
+    
+    # 尝试常见的分隔符
     delimiters = [',', '\t', ' ', None]
     for delimiter in delimiters:
         try:
             data = np.loadtxt(file_path, delimiter=delimiter)
-            return data[:, 0], data[:, 1]
-        except:
-            continue
-    raise ValueError(f"无法解析文件: {file_path}")
+            if data.ndim != 2 or data.shape[1] < 2:
+                raise ValueError("数据格式不正确，需要至少两列数据")
+            return data[:, 0], data[:, 1]  # 返回时间和活性
+        except Exception as e:
+            continue  # 尝试下一个分隔符
+    
+    raise ValueError(f"无法解析文件格式: {file_name}")
 
 def V_model(t, tau):
     """V(t)模型：描述诱导分子TMG的渗透过程"""
@@ -28,7 +44,6 @@ def fit_model(t, data, model_func, p0, bounds=None):
     返回:
         tuple: (拟合参数, 协方差矩阵)
     """
-    # 只有当提供了边界时才传递bounds参数
     if bounds is not None:
         popt, pcov = curve_fit(model_func, t, data, p0=p0, bounds=bounds)
     else:
@@ -80,21 +95,28 @@ def calculate_errors(pcov):
 
 def main():
     """主函数：加载数据、拟合模型、绘制结果"""
-    data_dir = "/Users/lixh/Library/CloudStorage/OneDrive-个人/Code/cp2025-InterpolateFit/细菌生长实验数据拟合"
+    print("\n正在从当前目录加载实验数据...")
     
-    # 加载数据
-    print("加载实验数据...")
-    t_V, V_data = load_bacterial_data(f"{data_dir}/g149novickA.txt")
-    t_W, W_data = load_bacterial_data(f"{data_dir}/g149novickB.txt")
+    try:
+        # 直接从当前目录加载文件
+        t_V, V_data = load_bacterial_data("g149novickA.txt")
+        t_W, W_data = load_bacterial_data("g149novickB.txt")
+    except FileNotFoundError as e:
+        print(f"数据加载失败: {e}")
+        print("请确保g149novickA.txt和g149novickB.txt文件与本程序在同一目录下")
+        return
+    except ValueError as e:
+        print(f"数据格式错误: {e}")
+        return
     
     # 拟合V(t)模型
-    print("拟合V(t)模型...")
+    print("\n拟合V(t)模型...")
     popt_V, pcov_V = fit_model(t_V, V_data, V_model, p0=[1.0], bounds=(0, np.inf))
     perr_V = calculate_errors(pcov_V)
     print(f"V(t)模型拟合参数: τ = {popt_V[0]:.3f} ± {perr_V[0]:.3f}")
     
     # 拟合W(t)模型
-    print("拟合W(t)模型...")
+    print("\n拟合W(t)模型...")
     popt_W, pcov_W = fit_model(t_W, W_data, W_model, p0=[1.0, 1.0], 
                              bounds=([0, 0], [np.inf, np.inf]))
     perr_W = calculate_errors(pcov_W)
