@@ -10,7 +10,8 @@ ERROR = np.array([9.34, 17.9, 41.5, 85.5, 51.5, 21.5, 10.8, 6.29, 4.14])  # mb
 def lagrange_interpolation(x_points, x_data, y_data):
     """向量化实现拉格朗日插值"""
     x_points = np.atleast_1d(x_points)
-    result = np.zeros_like(x_points)
+    # 修正：显式指定结果数组为浮点类型，避免类型不匹配错误
+    result = np.zeros_like(x_points, dtype=float)
     
     for i, xi in enumerate(x_data):
         # 计算拉格朗日基函数
